@@ -1,142 +1,60 @@
 # Divine Scrobbler
 
-A tiny Python script that scrobbles a list of tracks to your [Last.fm](https://www.last.fm) profile in bulk. No extra packages needed.
+Add many songs to your [Last.fm](https://www.last.fm) profile at once.
 
-## Features
+You need: a free Last.fm account and [Python](https://www.python.org/downloads/) installed.
 
-- Reads tracks from a simple CSV file
-- Sends 50 scrobbles per request (the Last.fm API maximum)
-- Automatically timestamps tracks backwards from the current time, based on duration
-- Optional `--total` flag to loop your list up to a set number of scrobbles
-- `--dry-run` mode to preview before sending anything
-- Authorizes once and remembers your session
-- Retries automatically (with growing waits) on temporary Last.fm errors
-- Saves any batches that fail to `failed_scrobbles.csv` so you can re-run them later
-
-## Requirements
-
-- [Python 3.7+](https://www.python.org/downloads/)
-- A Last.fm account
-
-## Quick start
-
-### 1. Get a Last.fm API key
+## Step 1: Get a Last.fm API key (one time)
 
 1. Go to <https://www.last.fm/api/account/create> and log in.
-2. Fill in the form:
-   | Field | What to enter |
-   |---|---|
-   | Application name | Anything, e.g. `My Scrobbler` |
-   | Application description | e.g. `Personal script to scrobble my own listening history` |
-   | Callback URL | Leave empty |
-   | Application homepage | Leave empty |
+2. Fill in **Application name** (anything you like) and **Application description** (anything). Leave the other boxes empty.
 3. Tick "I'm not a robot" and click **Submit**.
-4. Copy your **API key** and **Shared secret**. Keep the secret private.
+4. You'll see an **API key** and a **Shared secret**. Keep this page open. Never share the secret.
 
-### 2. Download the files
+## Step 2: Make your song list
 
-Put `scrobbler.py` and your CSV file in the same folder.
+1. Copy `tracks.example.csv` and rename the copy to `tracks.csv`.
+2. Open it in Notepad (or any text editor) and replace the songs with yours.
 
-### 3. Make your CSV
+Each line is one song, like this:
 
-Create a file called `tracks.csv` with **no header row**, one track per line:
-
-```csv
-"Artist","Track","Album","Timestamp","Album Artist","Duration"
+```
+"Artist","Song title","Album","","Album artist","Length in seconds"
 ```
 
-Only **artist** and **track** are required. Leave the rest as `""` if you don't need them.
+Only the **artist** and **song title** are needed. This works too:
 
-Example:
-
-```csv
-"Jeff Buckley","Last Goodbye","Grace","","Jeff Buckley","275"
-"Radiohead","Weird Fishes","","","","318"
-"Daft Punk","Digital Love","","","",""
+```
+"Radiohead","Weird Fishes/Arpeggi"
 ```
 
-| Field | Notes |
-|---|---|
-| Artist | Required |
-| Track | Required |
-| Album | Optional |
-| Timestamp | Optional, format `YYYY-MM-DD HH:MM:SS` (your local time) |
-| Album Artist | Optional |
-| Duration | Optional, in **seconds**. Defaults to 180 (3 minutes) |
+## Step 3: Run it
 
-If you leave the timestamp empty, the script stacks the tracks backwards from the current time, so the last row in your file becomes the most recent scrobble.
+Put `scrobbler.py` and `tracks.csv` in the same folder. Open a terminal in that folder (Windows: type `cmd` in the folder's address bar and press Enter).
 
-### 4. Preview (optional but recommended)
+Test first (sends nothing):
 
-```bash
+```
 python scrobbler.py tracks.csv --dry-run
 ```
 
-On Mac or Linux you may need `python3` instead of `python`.
+Then the real thing:
 
-### 5. Scrobble
-
-```bash
+```
 python scrobbler.py tracks.csv
 ```
 
-The first time, the script will:
+The first time, it asks for your API key and secret. Paste them in, open the link it shows, click **Yes, allow access**, then press **Enter** in the terminal. You only do this once.
 
-1. Ask for your API key and shared secret.
-2. Print a link. Open it, log in and click **Yes, allow access**.
-3. Come back to the terminal and press **Enter**.
+On Mac, use `python3` instead of `python`.
 
-Your session is saved in `.lastfm_session.json`, so you won't need to do this again.
+## Good to know
 
-## Options
+- **Songs older than 14 days are rejected by Last.fm.** Your songs get timestamped as if you just listened, ending now.
+- **Repeat a list:** add `--total 100` to repeat your songs until 100 scrobbles are sent.
+- **Error 503:** Last.fm is busy. The script retries by itself. Anything that still fails is saved in `failed_scrobbles.csv`: run the script on that file later. Adding `--batch-size 10` can also help.
+- **Never share** your shared secret or the `.lastfm_session.json` file.
 
-| Option | What it does |
-|---|---|
-| `--dry-run` | Shows what would be scrobbled without sending anything |
-| `--total N` | Loops through the CSV until exactly `N` scrobbles are made |
-| `--batch-size N` | Tracks per request, 1-50 (default 50). Try 10-20 if Last.fm keeps timing out |
+## Please use fairly
 
-Example: scrobble a list on repeat until you reach 200 scrobbles:
-
-```bash
-python scrobbler.py tracks.csv --total 200
-```
-
-### Skip the prompts (optional)
-
-Set your keys as environment variables instead of typing them:
-
-```bash
-# Mac / Linux
-export LASTFM_API_KEY="your_key"
-export LASTFM_API_SECRET="your_secret"
-
-# Windows (PowerShell)
-$env:LASTFM_API_KEY="your_key"
-$env:LASTFM_API_SECRET="your_secret"
-```
-
-## Limits to know about
-
-- **14-day rule:** Last.fm's API ignores scrobbles with timestamps older than 14 days. Older tracks will show up as "ignored".
-- **Daily limits:** Last.fm doesn't publish an official cap, but very large amounts per day (a few thousand) may get ignored.
-- **No future timestamps.**
-
-## Troubleshooting
-
-| Problem | Fix |
-|---|---|
-| `503` / "Last.fm is struggling" | Last.fm's servers are timing out. The script retries on its own and re-tries failed batches after a pause. If some still fail, they are saved to `failed_scrobbles.csv`: run `python scrobbler.py failed_scrobbles.csv` later. Using `--batch-size 10` can also help. |
-| `Could not get session` | You didn't click **Yes, allow access** before pressing Enter. Run the script again and use the new link. |
-| `Invalid API key` | Check that you copied the key correctly, with no spaces. |
-| Many scrobbles "ignored" | Timestamps are older than 14 days, or you hit a daily limit. |
-| `python` not found | Try `python3`, or reinstall Python and tick "Add to PATH". |
-
-## Security
-
-- Never share your **shared secret** or the `.lastfm_session.json` file.
-- Add `.lastfm_session.json` to your `.gitignore` if you put this in a repository.
-
-## Disclaimer
-
-Use this tool only for scrobbling music you have actually listened to, such as importing history from another app. Last.fm's terms of service don't allow artificially inflating play counts, and accounts that do so can be flagged or have scrobbles removed. This project is not affiliated with Last.fm. You are responsible for how you use it.
+Use this for music you really listened to, like moving your history from another app. Last.fm doesn't allow faking play counts, and your account can be flagged. Not affiliated with Last.fm. Use at your own risk.
