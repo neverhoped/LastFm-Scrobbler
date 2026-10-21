@@ -10,7 +10,8 @@ A tiny Python script that scrobbles a list of tracks to your [Last.fm](https://w
 - Optional `--total` flag to loop your list up to a set number of scrobbles
 - `--dry-run` mode to preview before sending anything
 - Authorizes once and remembers your session
-- Retries automatically on temporary Last.fm errors
+- Retries automatically (with growing waits) on temporary Last.fm errors
+- Saves any batches that fail to `failed_scrobbles.csv` so you can re-run them later
 
 ## Requirements
 
@@ -93,6 +94,7 @@ Your session is saved in `.lastfm_session.json`, so you won't need to do this ag
 |---|---|
 | `--dry-run` | Shows what would be scrobbled without sending anything |
 | `--total N` | Loops through the CSV until exactly `N` scrobbles are made |
+| `--batch-size N` | Tracks per request, 1-50 (default 50). Try 10-20 if Last.fm keeps timing out |
 
 Example: scrobble a list on repeat until you reach 200 scrobbles:
 
@@ -124,7 +126,7 @@ $env:LASTFM_API_SECRET="your_secret"
 
 | Problem | Fix |
 |---|---|
-| `HTTP error 503` or "Last.fm problem" | Last.fm is having a temporary issue. The script retries on its own. If it keeps failing, wait a few minutes and run it again. |
+| `503` / "Last.fm is struggling" | Last.fm's servers are timing out. The script retries on its own and re-tries failed batches after a pause. If some still fail, they are saved to `failed_scrobbles.csv`: run `python scrobbler.py failed_scrobbles.csv` later. Using `--batch-size 10` can also help. |
 | `Could not get session` | You didn't click **Yes, allow access** before pressing Enter. Run the script again and use the new link. |
 | `Invalid API key` | Check that you copied the key correctly, with no spaces. |
 | Many scrobbles "ignored" | Timestamps are older than 14 days, or you hit a daily limit. |
