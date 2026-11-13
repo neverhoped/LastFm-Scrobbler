@@ -1,4 +1,4 @@
-# Divine Scrobbler
+# LastFm Scrobbler
 
 Add many songs to your [Last.fm](https://www.last.fm) profile at once.
 
